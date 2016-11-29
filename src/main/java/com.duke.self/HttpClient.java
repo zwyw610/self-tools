@@ -31,8 +31,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class HttpClient{
 
@@ -134,7 +137,6 @@ public class HttpClient{
 
         try {
             HttpPost post = new HttpPost(getURI(url));
-
             if (headers != null) {
                 post.setHeaders(assemblyHeader(headers));
             }
@@ -313,12 +315,25 @@ public class HttpClient{
 
 
     public static void main(String[] args) throws ClientProtocolException, IOException{
-        HttpClient client = new HttpClient();
+        final HttpClient client = new HttpClient();
         client.initClientParam();
+        final Map<String, String> paraMap = new HashMap<String, String>();
+        paraMap.put("username", "xiaohanluo");
+        paraMap.put("un", "wsqduanqiaocanxue");
+        Executor executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1);
+        for(int i = 0; i < 1000000; i++){
+            executor.execute(new Runnable() {
+                public void run() {
+                    String ret = client.executePost("https://zhidao.baidu.com/question/2012213626400207268.html", paraMap, null);
+                    System.out.println(ret);
+                }
+            });
+        }
+
 /*    	client.downLoadPicture("http://bizhi.zhuoku.com/2011/10/11/jingxuan/jingxuan026.jpg",
     			"D://dailyData", "");*/
-        client.downLoadRegisterdelPicture("http://img.ljcdn.com/120000-delegation/9495c9c8-7ce7-4e05-a95e-3da165e6feb5.jpg,http://img.ljcdn.com/120000-delegation/60525c6a-869c-460c-b309-b6cc8d1e4c64.jpg,http://img.ljcdn.com/120000-delegation/75b6f3c1-ac66-44c6-b3ac-29cd0fadc016.jpg,http://img.ljcdn.com/120000-delegation/02a51f1b-f8c4-4bd4-9b85-dd0d6bf1f098.jpg,http://img.ljcdn.com/120000-delegation/f58a83ef-f85f-4e46-a1bf-9b680d973fd6.jpg,http://img.ljcdn.com/120000-delegation/7dac568b-73e0-4131-822f-21f20626a5e2.jpg,http://img.ljcdn.com/120000-delegation/68980979-a9a1-484c-a461-3bcad1b16318.jpg,http://img.ljcdn.com/120000-delegation/6d4f35db-778d-4ca3-b093-1854aa390428.jpg,http://img.ljcdn.com/120000-delegation/98138ab2-e124-4cd4-8259-323b4b1a9586.jpg,http://img.ljcdn.com/120000-delegation/c30fe447-3453-4746-b07a-c3aaac1754fe.jpg",
-                "D://dailyData//pic", "101100205530");
+/*        client.downLoadRegisterdelPicture("http://img.ljcdn.com/120000-delegation/9495c9c8-7ce7-4e05-a95e-3da165e6feb5.jpg,http://img.ljcdn.com/120000-delegation/60525c6a-869c-460c-b309-b6cc8d1e4c64.jpg,http://img.ljcdn.com/120000-delegation/75b6f3c1-ac66-44c6-b3ac-29cd0fadc016.jpg,http://img.ljcdn.com/120000-delegation/02a51f1b-f8c4-4bd4-9b85-dd0d6bf1f098.jpg,http://img.ljcdn.com/120000-delegation/f58a83ef-f85f-4e46-a1bf-9b680d973fd6.jpg,http://img.ljcdn.com/120000-delegation/7dac568b-73e0-4131-822f-21f20626a5e2.jpg,http://img.ljcdn.com/120000-delegation/68980979-a9a1-484c-a461-3bcad1b16318.jpg,http://img.ljcdn.com/120000-delegation/6d4f35db-778d-4ca3-b093-1854aa390428.jpg,http://img.ljcdn.com/120000-delegation/98138ab2-e124-4cd4-8259-323b4b1a9586.jpg,http://img.ljcdn.com/120000-delegation/c30fe447-3453-4746-b07a-c3aaac1754fe.jpg",
+                "D://dailyData//pic", "101100205530");*/
     }
 
 
