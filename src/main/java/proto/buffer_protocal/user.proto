@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option java_package = "model";
+option java_outer_classname = "UserInfo";
+
+package buffer_protocal;
+
+message User{
+
+    string username = 1;
+
+    int32 age = 2;
+
+}

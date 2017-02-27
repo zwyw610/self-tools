@@ -1,5 +1,24 @@
 package com.duke.self;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -25,24 +44,25 @@ import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
+import com.google.gson.Gson;
+
+import google.GoogleVisionFeature;
+import google.GoogleVisionFeatureType;
+import google.GoogleVisionImage;
+import google.GoogleVisionRequest;
+import sun.misc.BASE64Encoder;
 
 public class HttpClient{
 
 
     private static final Logger logger = LoggerFactory.getLogger(HttpClient.class);
 
+    private static final String GOOGLE_API_KEY = "AIzaSyA2eAJIO4A2pd_b3O2AgZW0SYG-RSYIenc";
+    //private static final String GOOGLE_API_KEY = "AIzaSyD-a9IF8KKYgoC3cpgS-Al7hLQDbugrDcw";
+
     private PoolingHttpClientConnectionManager cm = null;
     private RequestConfig requestConfig = null;
-    private int timeout = 1000;
+    private int timeout = 5000;
 
 
     public void initClientParam(){
@@ -154,7 +174,6 @@ public class HttpClient{
             }
             post.setEntity(posEntity);
             post.setConfig(requestConfig);
-
             response = httpclient.execute(post);
             HttpEntity entity = response.getEntity();
             String content = EntityUtils.toString(entity, charSet);
@@ -316,195 +335,87 @@ public class HttpClient{
     public static void main(String[] args) throws ClientProtocolException, IOException{
         HttpClient client = new HttpClient();
         client.initClientParam();
-/*    	client.downLoadPicture("http://bizhi.zhuoku.com/2011/10/11/jingxuan/jingxuan026.jpg",
-    			"D://dailyData", "");*/
-        client.downLoadRegisterdelPicture("http://img.ljcdn.com/120000-delegation/9495c9c8-7ce7-4e05-a95e-3da165e6feb5.jpg,http://img.ljcdn.com/120000-delegation/60525c6a-869c-460c-b309-b6cc8d1e4c64.jpg,http://img.ljcdn.com/120000-delegation/75b6f3c1-ac66-44c6-b3ac-29cd0fadc016.jpg,http://img.ljcdn.com/120000-delegation/02a51f1b-f8c4-4bd4-9b85-dd0d6bf1f098.jpg,http://img.ljcdn.com/120000-delegation/f58a83ef-f85f-4e46-a1bf-9b680d973fd6.jpg,http://img.ljcdn.com/120000-delegation/7dac568b-73e0-4131-822f-21f20626a5e2.jpg,http://img.ljcdn.com/120000-delegation/68980979-a9a1-484c-a461-3bcad1b16318.jpg,http://img.ljcdn.com/120000-delegation/6d4f35db-778d-4ca3-b093-1854aa390428.jpg,http://img.ljcdn.com/120000-delegation/98138ab2-e124-4cd4-8259-323b4b1a9586.jpg,http://img.ljcdn.com/120000-delegation/c30fe447-3453-4746-b07a-c3aaac1754fe.jpg",
-                "D://dailyData//pic", "101100205530");
+        client.invokeGoogle();
     }
 
 
-
-//		public static class Response {
-//			private String content;
-//			private int status;
-//			private Header[] headers;
-//
-//			public Response(String content, int status, Header[] headers) {
-//				this.content = content;
-//				this.status = status;
-//				this.headers = headers;
-//			}
-//
-//			public String getContent() {
-//				return this.content;
-//			}
-//
-//			public int getStatus() {
-//				return this.status;
-//			}
-//
-//			private String getValueFromArr(String[] arr) {
-//				if (arr == null || arr.length < 2) {
-//					return "";
-//				} else {
-//					return arr[1];
-//				}
-//			}
-//
-//			private Map<String, String> parseCookieString(String str) {
-//				Map<String, String> map = new HashMap<String, String>();
-//				String[] arr = str.split(";");
-//				for (String s : arr) {
-//					if (StringUtils.isNotBlank(s) && s.contains("=")) {
-//						String[] kv = s.split("=");
-//						if ("path".equals(kv[0].trim())) {
-//							String value = getValueFromArr(kv);
-//							if (StringUtils.isNotBlank(value)) {
-//								map.put("path", value);
-//							}
-//						} else if ("domain".equals(kv[0].trim())) {
-//							String value = getValueFromArr(kv);
-//							if (StringUtils.isNotBlank(value)) {
-//								map.put("domain", value);
-//							}
-//						} else if ("expires".equals(kv[0].trim())) {
-//							//						map.put("expires", -1);
-//						} else {
-//							map.put("name", kv[0].trim());
-//							map.put("value", getValueFromArr(kv));
-//						}
-//					}
-//				}
-//				return map;
-//			}
-//
-//			public List<Cookie> getCookies() {
-//				List<Cookie> list = new ArrayList<Cookie>();
-//				for (Header header : headers) {
-//					if (header.getName().equals("Set-Cookie")) {
-//						String cookieContent = header.getValue();
-//						Map<String, String> map = parseCookieString(cookieContent);
-//						Cookie cookie = new Cookie(map.get("name"), map.get("value"));
-//						if (StringUtils.isNotBlank(map.get("path")))
-//							cookie.setPath(map.get("path"));
-//						cookie.setMaxAge(-1);
-//						if (StringUtils.isNotBlank(map.get("domain")))
-//							cookie.setDomain(map.get("domain"));
-//						list.add(cookie);
-//					}
-//				}
-//				return list;
-//			}
-//
-//			public List<Cookie> getCookies(String... names) {
-//				List<Cookie> all = getCookies();
-//				List<Cookie> list = new ArrayList<Cookie>();
-//				for (String name : names) {
-//					for (Cookie c : all) {
-//						if (c.getName().equals(name)) {
-//							list.add(c);
-//						}
-//					}
-//				}
-//				return list;
-//			}
-//
-//		}
-//
-//		public static Response getResponseByPost(String url, String charsetName, Map<String, String> header, Map<String, String> paras) {
-//			HttpClient httpclient = new DefaultHttpClient();
-//			httpclient.getParams().setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 10000);
-//			httpclient.getParams().setParameter(CoreConnectionPNames.SO_TIMEOUT, 10000);
-//			String content = "";
-//			Response resp = null;
-//			HttpPost httppost = new HttpPost(url);
-//			try {
-//				httpclient = WebClientDevWrapper.wrapClient(httpclient);
-//				if (header != null && !header.isEmpty()) {
-//					for (Map.Entry<String, String> entry : header.entrySet()) {
-//						httppost.setHeader(entry.getKey(), entry.getValue());
-//					}
-//				}
-//
-//				List<NameValuePair> form = new ArrayList<NameValuePair>();
-//				if (paras != null && !paras.isEmpty()) {
-//					for (Map.Entry<String, String> entry : paras.entrySet()) {
-//						form.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
-//					}
-//				}
-//				UrlEncodedFormEntity paraentity = new UrlEncodedFormEntity(form, charsetName);
-//				httppost.setEntity(paraentity);
-//
-//				HttpResponse response = httpclient.execute(httppost);
-//
-//				HttpEntity entity = response.getEntity();
-//				StringBuilder sb = new StringBuilder();
-//				BufferedReader red = new BufferedReader(new InputStreamReader(entity.getContent(), charsetName));
-//				String line;
-//				while ((line = red.readLine()) != null) {
-//					sb.append(line + "\n");
-//				}
-//				content = sb.toString();
-//				resp = new Response(content, response.getStatusLine().getStatusCode(), response.getAllHeaders());
-//				EntityUtils.consume(entity);
-//			} catch (Exception e) {
-//				logger.error(e.getMessage(), e);
-//			} finally {
-//				//释放连接
-//				httppost.releaseConnection();
-//				httpclient.getConnectionManager().shutdown();
-//			}
-//
-//			return resp;
-//		}
-//
-//		public static Response getResponseByPostBody(String url, String postBody, Map<String, String> header, String charsetName) {
-//			HttpClient httpclient = new DefaultHttpClient();
-//			httpclient.getParams().setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 10000);
-//			httpclient.getParams().setParameter(CoreConnectionPNames.SO_TIMEOUT, 10000);
-//			String content = "";
-//			Response resp = null;
-//			HttpPost httppost = new HttpPost(url);
-//			try {
-//				httpclient = WebClientDevWrapper.wrapClient(httpclient);
-//				if (header != null && !header.isEmpty()) {
-//					for (Map.Entry<String, String> entry : header.entrySet()) {
-//						httppost.setHeader(entry.getKey(), entry.getValue());
-//					}
-//				}
-//
-//				if (postBody == null) {
-//					postBody = "";
-//				}
-//				HttpEntity postEntity = new StringEntity(postBody, charsetName);
-//				httppost.setEntity(postEntity);
-//
-//				HttpResponse response = httpclient.execute(httppost);
-//
-//				HttpEntity entity = response.getEntity();
-//				StringBuilder sb = new StringBuilder();
-//				BufferedReader red = new BufferedReader(new InputStreamReader(entity.getContent(), charsetName));
-//				String line;
-//				while ((line = red.readLine()) != null) {
-//					sb.append(line + "\n");
-//				}
-//				content = sb.toString();
-//				resp = new Response(content, response.getStatusLine().getStatusCode(), response.getAllHeaders());
-//				EntityUtils.consume(entity);
-//			} catch (Exception e) {
-//				logger.error(e.getMessage(), e);
-//			} finally {
-//				//释放连接
-//				httppost.releaseConnection();
-//				httpclient.getConnectionManager().shutdown();
-//			}
-//
-//			return resp;
-//		}
+    public void invokeGoogle(){
 
 
+        //bodyMap.put("key", GOOGLE_API_KEY);
+
+        String url ="https://content-vision.googleapis.com/v1/images:annotate?alt=json&key="+GOOGLE_API_KEY;
+
+        String file = "/Users/wangshuqiang/Downloads/label.jpeg";
+        FileInputStream input = null;
+        FileChannel channel = null;
+        Map<String, String> header = new HashMap<>();
+        header.put("Content-Type", "application/json");
+        try {
+            input = new FileInputStream(file);
+            channel = input.getChannel();
+            ByteBuffer byteBuffer = ByteBuffer.allocate((int) channel.size());
+            while ((channel.read(byteBuffer)) > 0) ;
+            String encoder = new BASE64Encoder().encode(byteBuffer.array());
+            GoogleVisionImage img = new GoogleVisionImage(encoder);
+            GoogleVisionRequest request = GoogleVisionRequest.build().setImage(img)
+                    .setFeatures(Arrays.asList(new GoogleVisionFeature(GoogleVisionFeatureType.LABEL_DETECTION, 1)));
+            Map<String, List<GoogleVisionRequest>> bodyMap = new HashMap<String, List<GoogleVisionRequest>>();
+            Gson gson = new Gson();
+            bodyMap.put("requests", Arrays.asList(request));
+            String joRet = gson.toJson(bodyMap);
+            System.out.println(joRet);
+            String ret = executePost(url, joRet, header,"utf-8");
+            System.out.println(ret);
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            try {
+                input.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
 
+        Map<String, String> aa = new HashMap<>();
+        aa.put("123", "456");
+        System.out.println(new Gson().toJson(aa));
+
+
+    }
+
+    public String executePost(String url, String pic, Map<String, String> headers, String charSet) {
+        CloseableHttpClient httpclient = getHttpClient();
+        CloseableHttpResponse response = null;
+
+        try {
+            HttpPost post = new HttpPost(getURI(url));
+
+            if (headers != null) {
+                post.setHeaders(assemblyHeader(headers));
+            }//  设置HTTP POST请求参数必须用NameValuePair对象
+
+            post.setConfig(requestConfig);
+            StringEntity entityPic = new StringEntity(pic);
+            post.setEntity(entityPic);
+            response = httpclient.execute(post);
+            HttpEntity entity = response.getEntity();
+            String content = EntityUtils.toString(entity, charSet);
+            return content;
+        } catch (Exception e) {
+            logger.error(e.getMessage() + " when url is:" + url, e);
+            return null;
+        } finally {
+            if(null != response){
+                try {
+                    response.close();
+                } catch (IOException e) {
+                    logger.error(e.getMessage(), e);
+                }
+            }
+        }
+    }
 
 
 
