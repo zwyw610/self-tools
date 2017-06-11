@@ -31,13 +31,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
-public class HttpClient{
+public class HttpClient {
 
 
     private static final Logger logger = LoggerFactory.getLogger(HttpClient.class);
@@ -46,9 +45,13 @@ public class HttpClient{
     private RequestConfig requestConfig = null;
     private int timeout = 1000;
 
+    CloseableHttpClient httpClient = null;
 
-    public void initClientParam(){
-        if(cm == null)
+    public static BlockingQueue<CloseableHttpResponse> queue = new ArrayBlockingQueue<CloseableHttpResponse>(100000);
+
+
+    public void initClientParam() {
+        if (cm == null)
             cm = new PoolingHttpClientConnectionManager();
         // 将最大连接数增加到200
         cm.setMaxTotal(200);
@@ -72,11 +75,16 @@ public class HttpClient{
 
 
     public CloseableHttpClient getHttpClient() {
-        CloseableHttpClient httpClient = HttpClients.custom()
-                .setConnectionManager(cm)
-                .build();
+
+        if (httpClient == null) {
+            httpClient = HttpClients.custom()
+                    .setConnectionManager(cm)
+                    .build();
+        }
+        //CloseableHttpClient
         return httpClient;
     }
+
 
     private static URI getURI(String url) throws MalformedURLException, URISyntaxException {
         if (url != null && !url.startsWith("http")) {
@@ -110,7 +118,7 @@ public class HttpClient{
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         } finally {
-            if(null != response){
+            if (null != response) {
                 try {
                     response.close();
                 } catch (IOException e) {
@@ -164,7 +172,7 @@ public class HttpClient{
             logger.error(e.getMessage() + " when url is:" + url, e);
             return null;
         } finally {
-            if(null != response){
+            if (null != response) {
                 try {
                     response.close();
                 } catch (IOException e) {
@@ -173,6 +181,133 @@ public class HttpClient{
             }
         }
     }
+
+    public String executePostWithCookie(String url, Map<String, String> params, Map<String, String> headers, String charSet, String cookie) {
+        CloseableHttpClient httpclient = getHttpClient();
+        CloseableHttpResponse response = null;
+
+        try {
+            //HttpPost post = new HttpPost(getURI(url));
+            HttpGet post = new HttpGet(getURI(url));
+            if (headers != null) {
+                post.setHeaders(assemblyHeader(headers));
+            }
+            if (org.apache.commons.lang3.StringUtils.isNotEmpty(cookie)) {
+                post.setHeader("Cookie", cookie);
+            }
+
+            //post.setHeader("Cache-Control", "no-cache");
+//            post.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+//            post.setHeader("Accept-Encoding", "gzip, deflate");
+//            post.setHeader("Connection", "keep-alive");
+//            post.setHeader("Content-Length", "0");
+//            post.setHeader("Content-Type", "application/x-www-form-urlencoded");
+//            post.setHeader("Origin", "http://ptcms.csdn.net");
+//            post.setHeader("X-Requested-With", "XMLHttpRequest");
+            //红包系统
+            post.setHeader("Host", "mp.weixin.qq.com");
+            post.setHeader("Connection", "keep-alive");
+            //post.setHeader("X-Requested-With", "");
+            //post.setHeader("platform", "iOS");
+            post.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+            //post.setHeader("Origin", "http://m.hongbao.link.lianjia.com");
+            post.setHeader("Referer", "https://mp.weixin.qq.com/misc/webpageanalysis?action=listintfstat&token=756669216&lang=zh_CN");
+            post.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.94 Safari/537.36");
+            post.setHeader("Accept-Language", "zh-CN,zh;q=0.8");
+
+            //  设置HTTP POST请求参数必须用NameValuePair对象
+            List<NameValuePair> lst = new ArrayList<NameValuePair>();
+            for (Map.Entry<String, String> entry : params.entrySet()) {
+                lst.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
+            }
+            //  设置HTTP POST请求参数
+            //UrlEncodedFormEntity posEntity = new UrlEncodedFormEntity(lst, charSet);
+            //post.setEntity(posEntity);
+            post.setConfig(requestConfig);
+            long t1 = System.currentTimeMillis();
+            response = httpclient.execute(post);
+            long t2 = System.currentTimeMillis();
+            System.out.println("方法调用时间:" + (t2 - t1));
+            if (response != null) {
+                queue.put(response);
+            }
+//            return "";
+            HttpEntity entity = response.getEntity();
+            String content = EntityUtils.toString(entity, charSet);
+            return content;
+        } catch (Exception e) {
+            logger.error(e.getMessage() + " when url is:" + url, e);
+            return null;
+        } finally {
+
+        }
+    }
+
+    /**
+     * 京东黑心客服，年后一定要找个时间给他来一段
+     */
+    public String executeSendPostWithCookie(String url, Map<String, String> params, Map<String, String> headers, String charSet, String cookie) {
+        CloseableHttpClient httpclient = getHttpClient();
+        CloseableHttpResponse response = null;
+
+        try {
+            HttpPost post = new HttpPost(getURI(url));
+            if (headers != null) {
+                post.setHeaders(assemblyHeader(headers));
+            }
+            if (org.apache.commons.lang3.StringUtils.isNotEmpty(cookie)) {
+                post.setHeader("Cookie", cookie);
+            }
+
+            post.setHeader("Cache-Control", "no-cache");
+            post.setHeader("Accept", "*/*");
+            post.setHeader("Accept-Encoding", "gzip, deflate");
+            post.setHeader("Connection", "keep-alive");
+//            post.setHeader("Content-Length", "82");
+            post.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+            post.setHeader("Host", "memberprod.alipay.com");
+            post.setHeader("Origin", "https://memberprod.alipay.com");
+            post.setHeader("X-Requested-With", "XMLHttpRequest");
+            post.setHeader("Pragma", "no-cache");
+            post.setHeader("Referer", "https://memberprod.alipay.com/account/reg/index.htm");
+            post.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.94 Safari/537.36");
+            //post.setHeader("Referer", "https://memberprod.alipay.com/account/reg/index.htm");
+
+
+            //  设置HTTP POST请求参数必须用NameValuePair对象
+            List<NameValuePair> lst = new ArrayList<NameValuePair>();
+            for (Map.Entry<String, String> entry : params.entrySet()) {
+                lst.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
+            }
+            //  设置HTTP POST请求参数
+            UrlEncodedFormEntity posEntity = new UrlEncodedFormEntity(lst, charSet);
+            if (logger.isDebugEnabled()) {
+                ByteArrayOutputStream os = new ByteArrayOutputStream();
+                posEntity.writeTo(os);
+                logger.debug("url:{},content:{}", url, os.toString());
+            }
+            post.setEntity(posEntity);
+            post.setConfig(requestConfig);
+
+            response = httpclient.execute(post);
+            return response.getStatusLine().getStatusCode() + "-" + response.getStatusLine().getReasonPhrase();
+//            HttpEntity entity = response.getEntity();
+//            String content = EntityUtils.toString(entity, charSet);
+//            return content;
+        } catch (Exception e) {
+            logger.error(e.getMessage() + " when url is:" + url, e);
+            return null;
+        } finally {
+            if (null != response) {
+                try {
+                    response.close();
+                } catch (IOException e) {
+                    logger.error(e.getMessage(), e);
+                }
+            }
+        }
+    }
+
 
     public String executePost(String url, Map<String, String> params, String charSet) {
         return executePost(url, params, null, charSet);
@@ -185,7 +320,6 @@ public class HttpClient{
         try {
             HttpGet getHtml = new HttpGet(getURI(url));
             getHtml.setConfig(requestConfig);
-
             //			String html = httpclient.execute(getHtml, responseHandler);
             response = httpclient.execute(getHtml);
             HttpEntity entity = response.getEntity();
@@ -195,7 +329,7 @@ public class HttpClient{
             logger.error(e.getMessage() + " when url is:" + url);
             return null;
         } finally {
-            if(null != response){
+            if (null != response) {
                 try {
                     response.close();
                 } catch (IOException e) {
@@ -205,6 +339,44 @@ public class HttpClient{
         }
     }
 
+
+    public String executeGetHouseInfo(String url, String charSet, String cookie) {
+        CloseableHttpClient httpclient = getHttpClient();
+        CloseableHttpResponse response = null;
+
+        try {
+            HttpGet getHtml = new HttpGet(getURI(url));
+            getHtml.setConfig(requestConfig);
+            //getHtml.setHeader("Cookie", "lianjia_uuid=a58a6ea1-03ce-4591-9a51-d8207b954bb7; _jzqa=1.360641581121633500.1473069915.1473069915.1473069915.1; lianjia_token=2.000d7e7a7277f6bae21cd353438ab3e992; Hm_lvt_efa595b768cc9dc7d7f9823368e795f1=1479464947,1480226521,1481683510; _smt_uid=575253a0.486ffec7; _ga=GA1.2.469462526.1465013155; _lianjia_link_snid=1000000020049906%3Ajingjiren%3A%E7%BB%8F%E7%BA%AA%E4%BA%BA%3AA12P64%3A%E5%A5%A5%E5%8C%97%E4%B8%AD%E5%BF%83%E5%8D%97%E5%8C%BA%E5%BA%97A%E5%BA%97; _UC_agent=1; lianjia_ssid=3786e966-250c-8ace-2f51-2d76ec1b2136; BUSINESSJSESSIONID=8c51c0b2-ecce-4df6-9ddf-6e4f9f1d503e");
+            //getHtml.setHeader("Cookie", "lianjia_uuid=a58a6ea1-03ce-4591-9a51-d8207b954bb7; _jzqa=1.360641581121633500.1473069915.1473069915.1473069915.1; lianjia_token=2.000d7e7a7277f6bae21cd353438ab3e992; Hm_lvt_efa595b768cc9dc7d7f9823368e795f1=1479464947,1480226521,1481683510; _smt_uid=575253a0.486ffec7; _ga=GA1.2.469462526.1465013155; HOUSEJSESSIONID=d3d80401-1de9-45c9-b274-b93ec36cd9ab; _UC_agent=1; lianjia_ssid=3786e966-250c-8ace-2f51-2d76ec1b2136; _lianjia_link_snid=1000000020096554%3Ajingjiren%3A%E7%BB%8F%E7%BA%AA%E4%BA%BA%3AN11234%3A%E6%A2%85%E8%8A%B1%E5%B1%B1%E5%BA%84%E5%BA%97A%E7%BB%84");
+            //getHtml.setHeader("Cookie", "lianjia_uuid=a58a6ea1-03ce-4591-9a51-d8207b954bb7; _jzqa=1.360641581121633500.1473069915.1473069915.1473069915.1; lianjia_token=2.000d7e7a7277f6bae21cd353438ab3e992; Hm_lvt_efa595b768cc9dc7d7f9823368e795f1=1479464947,1480226521,1481683510; _smt_uid=575253a0.486ffec7; _ga=GA1.2.469462526.1465013155; _UC_agent=1; lianjia_ssid=3786e966-250c-8ace-2f51-2d76ec1b2136; _lianjia_link_snid=1000000010022794%3Ajingjiren%3A%E7%BB%8F%E7%BA%AA%E4%BA%BA%3AA11863%3A%E9%87%91%E6%B3%B0%E4%B8%BD%E6%B9%BE%E5%BA%97A%E5%BA%97; _se_customer_snid=E59D2B489F224B4E8A5E1665A372D591; ke-link-lianjia=0f728747b6781c43ba2cefa98b52168c\n" +
+            //"Host:ke.link.lianjia.com");
+            if (org.apache.commons.lang3.StringUtils.isNotEmpty(cookie)) {
+                getHtml.setHeader("Cookie", cookie);
+            }
+            getHtml.setHeader("Cache-Control", "no-cache");
+            getHtml.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+            getHtml.setHeader("Accept-Encoding", "gzip, deflate, sdch");
+            getHtml.setHeader("Connection", "keep-alive");
+            //getHtml.setHeader("Upgrade-Insecure-Requests", "1");
+            getHtml.setHeader("X-Requested-With", "XMLHttpRequest");
+            response = httpclient.execute(getHtml);
+            HttpEntity entity = response.getEntity();
+            String html = EntityUtils.toString(entity, charSet);
+            return html;
+        } catch (Exception e) {
+            logger.error(e.getMessage() + " when url is:" + url);
+            return null;
+        } finally {
+            if (null != response) {
+                try {
+                    response.close();
+                } catch (IOException e) {
+                    logger.error(e.getMessage(), e);
+                }
+            }
+        }
+    }
 
     //去掉所有ssl验证
     public String postBody(String url, String postBody, Map<String, String> header, String charsetName) {
@@ -241,7 +413,7 @@ public class HttpClient{
             logger.error(e.getMessage(), e);
         } finally {
             //释放连接
-            if(null != response){
+            if (null != response) {
                 try {
                     response.close();
                 } catch (IOException e) {
@@ -265,26 +437,26 @@ public class HttpClient{
 
     /**
      * 下载图片
-     * @param picPath 图片远程地址
-     * @param localPath 照片本地路径
-     * @param localPicName 本地图片名称,可以为空,如是如此则会将远程服务器的图片名称作为本地图片名称
      *
+     * @param picPath      图片远程地址
+     * @param localPath    照片本地路径
+     * @param localPicName 本地图片名称,可以为空,如是如此则会将远程服务器的图片名称作为本地图片名称
      * @throws IOException
      * @throws ClientProtocolException
      */
-    public void downLoadPicture(String picPath, String localPath, String localPicName) throws ClientProtocolException, IOException{
+    public void downLoadPicture(String picPath, String localPath, String localPicName) throws ClientProtocolException, IOException {
         CloseableHttpClient client = getHttpClient();
         HttpGet get = new HttpGet(picPath);
         CloseableHttpResponse response = client.execute(get);
         String picName = "";
-        if(StringUtils.isNotEmpty(localPicName)){
+        if (StringUtils.isNotEmpty(localPicName)) {
             picName = localPicName;
-        }else {
+        } else {
             //获取远程服务器上面的图片名称作为本地图片名称
             int index = picPath.lastIndexOf("/");
             picName = picPath.substring(index);
         }
-        if(localPath.endsWith("/") == false){
+        if (localPath.endsWith("/") == false) {
             localPath += "/";
         }
 
@@ -295,29 +467,22 @@ public class HttpClient{
         output.close();
     }
 
-    public void downLoadRegisterdelPicture(String remotePath, String localPath, String rename) throws ClientProtocolException, IOException{
+    public void downLoadRegisterdelPicture(String remotePath, String localPath, String rename) throws ClientProtocolException, IOException {
 
         String[] pics = remotePath.split(",");
         int i = 1;
-        for(String pic : pics){
+        for (String pic : pics) {
             String picPath = pic.concat(".1000x.jpg");
-            downLoadPicture(picPath, localPath, rename+"-"+i+".jpg");
+            downLoadPicture(picPath, localPath, rename + "-" + i + ".jpg");
             i++;
         }
-
-
-
-
-
-
     }
 
 
-
-    public static void main(String[] args) throws ClientProtocolException, IOException{
+    public static void main(String[] args) throws ClientProtocolException, IOException {
         final HttpClient client = new HttpClient();
         client.initClientParam();
-        final Map<String, String> paraMap = new HashMap<String, String>();
+/*        final Map<String, String> paraMap = new HashMap<String, String>();
         paraMap.put("username", "xiaohanluo");
         paraMap.put("un", "wsqduanqiaocanxue");
         Executor executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1);
@@ -328,14 +493,13 @@ public class HttpClient{
                     System.out.println(ret);
                 }
             });
-        }
+        }*/
 
 /*    	client.downLoadPicture("http://bizhi.zhuoku.com/2011/10/11/jingxuan/jingxuan026.jpg",
-    			"D://dailyData", "");*/
-/*        client.downLoadRegisterdelPicture("http://img.ljcdn.com/120000-delegation/9495c9c8-7ce7-4e05-a95e-3da165e6feb5.jpg,http://img.ljcdn.com/120000-delegation/60525c6a-869c-460c-b309-b6cc8d1e4c64.jpg,http://img.ljcdn.com/120000-delegation/75b6f3c1-ac66-44c6-b3ac-29cd0fadc016.jpg,http://img.ljcdn.com/120000-delegation/02a51f1b-f8c4-4bd4-9b85-dd0d6bf1f098.jpg,http://img.ljcdn.com/120000-delegation/f58a83ef-f85f-4e46-a1bf-9b680d973fd6.jpg,http://img.ljcdn.com/120000-delegation/7dac568b-73e0-4131-822f-21f20626a5e2.jpg,http://img.ljcdn.com/120000-delegation/68980979-a9a1-484c-a461-3bcad1b16318.jpg,http://img.ljcdn.com/120000-delegation/6d4f35db-778d-4ca3-b093-1854aa390428.jpg,http://img.ljcdn.com/120000-delegation/98138ab2-e124-4cd4-8259-323b4b1a9586.jpg,http://img.ljcdn.com/120000-delegation/c30fe447-3453-4746-b07a-c3aaac1754fe.jpg",
-                "D://dailyData//pic", "101100205530");*/
+                "D://dailyData", "");*/
+        client.downLoadRegisterdelPicture("http://img.ljcdn.com/110000-delegation/ca4bc821-294c-49dd-a3aa-fd1200096d07.jpg,http://img.ljcdn.com/110000-delegation/6a65a285-68f7-415b-9d1c-cce26e59a56e.jpg,http://img.ljcdn.com/110000-delegation/de5c34a3-be40-4520-a549-3c41dfa053f3.jpg,http://img.ljcdn.com/110000-delegation/ae0d9796-98b2-4f0f-bc0b-ffb54670ff03.jpg,http://img.ljcdn.com/110000-delegation/15493c1a-2a93-41c7-9b78-c89484900104.jpg,http://img.ljcdn.com/110000-delegation/4680aef5-c849-49f7-a22a-6fe4b1e93a77.jpg,http://img.ljcdn.com/110000-delegation/65d68ef6-0518-45b5-a9d7-3851fc9a95df.jpg,http://img.ljcdn.com/110000-delegation/492afb3a-f7ef-42e9-a600-ea968df1ac43.jpg,http://img.ljcdn.com/110000-delegation/e2b3ee2c-b88d-43f4-8797-339cc48d2a95.jpg,http://img.ljcdn.com/110000-delegation/f816b584-5865-467a-976b-71b27837180d.jpg,http://img.ljcdn.com/110000-delegation/a3b7885f-bea5-4203-acff-c6194ef9df8e.jpg,http://img.ljcdn.com/110000-delegation/4c1ed3f7-412b-4425-a2f4-08fa5dd202f1.jpg",
+                "D://dailyData//pic", "101100531710");
     }
-
 
 
 //		public static class Response {
@@ -517,10 +681,60 @@ public class HttpClient{
 //		}
 
 
+    public String executeSubmitPostWithCookie(String url, Map<String, String> params, Map<String, String> headers,
+                                              String charSet, String cookie) {
+        CloseableHttpClient httpclient = getHttpClient();
+        CloseableHttpResponse response = null;
 
+        try {
+            HttpPost post = new HttpPost(getURI(url));
+            if (headers != null) {
+                post.setHeaders(assemblyHeader(headers));
+            }
+            if (org.apache.commons.lang3.StringUtils.isNotEmpty(cookie)) {
+                post.setHeader("Cookie", cookie);
+            }
+            post.setHeader("Cache-Control", "no-cache");
+            post.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+            post.setHeader("Accept-Encoding", "gzip, deflate");
+            post.setHeader("Connection", "keep-alive");
+            //post.setHeader("Content-Length", "0");
+            post.setHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundarydKxMDOrzhrZgkX2e");
+            post.setHeader("Origin", "http://zw.enorth.com.cn");
+            post.setHeader("X-Requested-With", "XMLHttpRequest");
 
+            //  设置HTTP POST请求参数必须用NameValuePair对象
+            List<NameValuePair> lst = new ArrayList<NameValuePair>();
+            for (Map.Entry<String, String> entry : params.entrySet()) {
+                lst.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
+            }
+            //  设置HTTP POST请求参数
+            UrlEncodedFormEntity posEntity = new UrlEncodedFormEntity(lst, charSet);
+            if (logger.isDebugEnabled()) {
+                ByteArrayOutputStream os = new ByteArrayOutputStream();
+                posEntity.writeTo(os);
+                logger.debug("url:{},content:{}", url, os.toString());
+            }
+            post.setEntity(posEntity);
+            post.setConfig(requestConfig);
 
-
+            response = httpclient.execute(post);
+            HttpEntity entity = response.getEntity();
+            String content = EntityUtils.toString(entity, charSet);
+            return content;
+        } catch (Exception e) {
+            logger.error(e.getMessage() + " when url is:" + url, e);
+            return null;
+        } finally {
+            if (null != response) {
+                try {
+                    response.close();
+                } catch (IOException e) {
+                    logger.error(e.getMessage(), e);
+                }
+            }
+        }
+    }
 
 
 }

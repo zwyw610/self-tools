@@ -60,7 +60,7 @@ public class CountFallOffRateByRegionEachCategory {
             if(StringUtils.isEmpty(line))
                 continue;
             String[] attr = line.split(",");
-            if(attr.length != 3){
+            if(attr.length != 2){
                 System.err.println(line);
                 continue;
             }
